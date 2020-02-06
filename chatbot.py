@@ -10,7 +10,7 @@ r = requests.get('https://github.com/shubham0204/Dataset_Archives/blob/master/ch
 z = zipfile.ZipFile(io.BytesIO(r.content))
 z.extractall()
 
-dir_path = 'chatbot/data'
+dir_path = 'chatbot_nlp/data'
 files_list = os.listdir(dir_path + os.sep)
 
 questions = list()
@@ -58,7 +58,6 @@ for filepath in files_list:
             questions.append(con[0])
             answers.append(con[1])
 
-
 answers_with_tags = list()
 for i in range(len(answers)):
     if type(answers[i]) == str:
@@ -76,7 +75,6 @@ VOCAB_SIZE = len(tokenizer.word_index) + 1
 
 print('VOCAB SIZE : {}'.format(VOCAB_SIZE))
 
-
 vocab = []
 for word in tokenizer.word_index:
     vocab.append(word)
@@ -90,40 +88,39 @@ def tokenize(sentences):
         sentence = re.sub('[^a-zA-Z]', ' ', sentence)
         tokens = sentence.split()
         vocabulary += tokens
-        tokens_list.append( tokens )
-    return tokens_list , vocabulary
+        tokens_list.append(tokens)
+    return tokens_list, vocabulary
 
 
 p = tokenize(questions + answers)
 model = Word2Vec(p[0], min_count=1)
 
-embedding_matrix = np.zeros((VOCAB_SIZE , 100))
+embedding_matrix = np.zeros((VOCAB_SIZE, 100))
 for i in range(len(tokenizer.word_index)):
-    embedding_matrix[i] = model[ vocab[i]]
+    embedding_matrix[i] = model[vocab[i]]
 
-tokenized_questions = tokenizer.texts_to_sequences( questions )
-maxlen_questions = max([len(x) for x in tokenized_questions ])
-padded_questions = tf.keras.preprocessing.sequence.pad_sequences(tokenized_questions , maxlen=maxlen_questions , padding='post')
-encoder_input_data = np.array( padded_questions )
+tokenized_questions = tokenizer.texts_to_sequences(questions)
+maxlen_questions = max([len(x) for x in tokenized_questions])
+padded_questions = tf.keras.preprocessing.sequence.pad_sequences(tokenized_questions, maxlen=maxlen_questions, padding='post')
+encoder_input_data = np.array(padded_questions)
 
-print( encoder_input_data.shape , maxlen_questions)
+print(encoder_input_data.shape, maxlen_questions)
 
 tokenized_answers = tokenizer.texts_to_sequences(answers)
 maxlen_answers = max([len(x) for x in tokenized_answers])
-padded_answers = tf.keras.preprocessing.sequence.pad_sequences(tokenized_answers , maxlen=maxlen_answers , padding='post')
+padded_answers = tf.keras.preprocessing.sequence.pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
 decoder_input_data = np.array(padded_answers)
 
-print( decoder_input_data.shape, maxlen_answers)
+print(decoder_input_data.shape, maxlen_answers)
 
 tokenized_answers = tokenizer.texts_to_sequences(answers)
 for i in range(len(tokenized_answers)):
     tokenized_answers[i] = tokenized_answers[i][1:]
 padded_answers = tf.keras.preprocessing.sequence.pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
-onehot_answers = tf.utils.to_categorical(padded_answers, VOCAB_SIZE)
+onehot_answers = tf.keras.utils.to_categorical(padded_answers, VOCAB_SIZE)
 decoder_output_data = np.array(onehot_answers)
 
 print(decoder_output_data.shape)
-
 
 encoder_inputs = tf.keras.layers.Input(shape=(None,))
 encoder_embedding = tf.keras.layers.Embedding(VOCAB_SIZE, 200, mask_zero=True)(encoder_inputs)
