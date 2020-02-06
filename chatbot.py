@@ -6,11 +6,11 @@ import yaml
 from gensim.models import Word2Vec
 import re
 
-r = requests.get( 'https://github.com/shubham0204/Dataset_Archives/blob/master/chatbot_nlp.zip?raw=true' )
+r = requests.get('https://github.com/shubham0204/Dataset_Archives/blob/master/chatbot_nlp.zip?raw=true')
 z = zipfile.ZipFile(io.BytesIO(r.content))
 z.extractall()
 
-dir_path = 'chatbot_nlp/data'
+dir_path = 'chatbot/data'
 files_list = os.listdir(dir_path + os.sep)
 
 questions = list()
@@ -170,7 +170,7 @@ def str_to_tokens(sentence: str):
 
 enc_model, dec_model = make_inference_models()
 
-for _ in range(10):
+for _ in range(100):
     states_values = enc_model.predict(str_to_tokens(input('Enter question : ')))
     empty_target_seq = np.zeros((1, 1))
     empty_target_seq[0, 0] = tokenizer.word_index['start']
