@@ -4,7 +4,6 @@ import numpy as np
 import tensorflow as tf
 from gensim.models import Word2Vec
 import re
-
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 ########################################################################################################################
@@ -53,6 +52,7 @@ def clean_text(text_to_clean):
     res = re.sub(r"[-()\"#/@;:<>{}`+=~|.!?,]", "", res)
     return res
 
+
 conves_dict = {}
 counter = 1
 conves_ids = []
@@ -67,7 +67,7 @@ for i in range(1, len(sorted_chats)+1):
             conves_ids = []
         counter += 1
     else:
-        pass
+        continue
 
 context_and_target = []
 for conves in conves_dict.values():
