@@ -6,6 +6,8 @@ from gensim.models import Word2Vec
 import re
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+
 ########################################################################################################################
 ########################################### DATA PREPARATION ###########################################################
 ########################################################################################################################
@@ -13,19 +15,23 @@ r = requests.get('http://www.cs.cornell.edu/~cristian/data/cornell_movie_dialogs
 z = zipfile.ZipFile(io.BytesIO(r.content))
 z.extractall()
 
-conversations = []
-with codecs.open("./cornell movie-dialogs corpus/movie_lines.txt", "rb", encoding="utf-8", errors="ignore") as f:
-    lines = f.read().split("\n")
-    for line in lines:
-        conversations.append(line.split(" +++$+++ "))
-print("Total conversations in dataset: {}".format(len(conversations)))
 
-chats = {}
-for tokens in conversations[:10000]:
-    if len(tokens) > 4:
-        chats[int(tokens[0][1:])] = tokens[4]
+def get_all_conversations():
+    all_conversations = []
+    with codecs.open("./cornell movie-dialogs corpus/movie_lines.txt", "rb", encoding="utf-8", errors="ignore") as f:
+        lines = f.read().split("\n")
+        for line in lines:
+            all_conversations.append(line.split(" +++$+++ "))
+    return all_conversations
 
-sorted_chats = sorted(chats.items(), key=lambda x: x[0])
+
+def get_all_sorted_chats(all_conversations):
+    all_chats = {}
+    # get only first 10000 conversations from dataset because whole dataset will take 9.16 TiB of RAM
+    for tokens in all_conversations[:10000]:
+        if len(tokens) > 4:
+            all_chats[int(tokens[0][1:])] = tokens[4]
+    return sorted(all_chats.items(), key=lambda x: x[0])
 
 
 def clean_text(text_to_clean):
@@ -53,44 +59,55 @@ def clean_text(text_to_clean):
     return res
 
 
-conves_dict = {}
-counter = 1
-conves_ids = []
-for i in range(1, len(sorted_chats)+1):
-    if i < len(sorted_chats):
-        if (sorted_chats[i][0] - sorted_chats[i-1][0]) == 1:
-            if sorted_chats[i-1][1] not in conves_ids:
-                conves_ids.append(sorted_chats[i-1][1])
-            conves_ids.append(sorted_chats[i][1])
-        elif (sorted_chats[i][0] - sorted_chats[i-1][0]) > 1:
-            conves_dict[counter] = conves_ids
-            conves_ids = []
-        counter += 1
-    else:
-        continue
+def get_conversation_dictionary(sorted_chats):
+    conversations_dictionary = {}
+    counter = 1
+    conversations_ids = []
+    for i in range(1, len(sorted_chats) + 1):
+        if i < len(sorted_chats):
+            if (sorted_chats[i][0] - sorted_chats[i - 1][0]) == 1:
+                if sorted_chats[i - 1][1] not in conversations_ids:
+                    conversations_ids.append(sorted_chats[i - 1][1])
+                conversations_ids.append(sorted_chats[i][1])
+            elif (sorted_chats[i][0] - sorted_chats[i - 1][0]) > 1:
+                conversations_dictionary[counter] = conversations_ids
+                conversations_ids = []
+            counter += 1
+        else:
+            continue
+    return conversations_dictionary
 
-context_and_target = []
-for conves in conves_dict.values():
-    if len(conves) % 2 != 0:
-        conves = conves[:-1]
-    for i in range(0, len(conves), 2):
-        context_and_target.append((conves[i], conves[i+1]))
-context, target = zip(*context_and_target)
-context_dirty = list(context)
-questions = list()
-for i in range(len(context_dirty)):
-    questions.append(clean_text(context_dirty[i]))
-target_dirty = list(target)
-answers = list()
-for i in range(len(target_dirty)):
-    answers.append('<START> ' + clean_text(target_dirty[i]) + ' <END>')
+
+def get_clean_questions_and_answers(conversations_dictionary):
+    context_and_target = []
+    for current_conversations in conversations_dictionary.values():
+        if len(current_conversations) % 2 != 0:
+            current_conversations = current_conversations[:-1]
+        for i in range(0, len(current_conversations), 2):
+            context_and_target.append((current_conversations[i], current_conversations[i + 1]))
+    context, target = zip(*context_and_target)
+    context_dirty = list(context)
+    clean_questions = list()
+    for i in range(len(context_dirty)):
+        clean_questions.append(clean_text(context_dirty[i]))
+    target_dirty = list(target)
+    clean_answers = list()
+    for i in range(len(target_dirty)):
+        clean_answers.append('<START> ' + clean_text(target_dirty[i]) + ' <END>')
+    return clean_questions, clean_answers
+
+
+conversations = get_all_conversations()
+print("Total conversations in dataset: {}".format(len(conversations)))
+all_sorted_chats = get_all_sorted_chats(conversations)
+conversation_dictionary = get_conversation_dictionary(all_sorted_chats)
+questions, answers = get_clean_questions_and_answers(conversation_dictionary)
 
 ########################################################################################################################
 ############################################# MODEL TRAINING ###########################################################
 ########################################################################################################################
 print(len(questions))
 print(len(answers))
-
 tokenizer = tf.keras.preprocessing.text.Tokenizer(filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~\t\n\'0123456789')
 tokenizer.fit_on_texts(questions + answers)
 VOCAB_SIZE = len(tokenizer.word_index) + 1
@@ -163,7 +180,7 @@ model.summary()
 
 model.fit([encoder_input_data, decoder_input_data], decoder_output_data, batch_size=50, epochs=300)
 model.save('model_big.h5')
-#model.load_weights('model_big.h5')
+# model.load_weights('model_big.h5')
 
 
 def make_inference_models():
@@ -183,8 +200,8 @@ def make_inference_models():
 def str_to_tokens(sentence: str):
     words = sentence.lower().split()
     tokens_list = list()
-    for word in words:
-        tokens_list.append(tokenizer.word_index[word])
+    for current_word in words:
+        tokens_list.append(tokenizer.word_index[current_word])
     return tf.keras.preprocessing.sequence.pad_sequences([tokens_list], maxlen=maxlen_questions, padding='post')
 
 
@@ -213,4 +230,3 @@ for _ in range(100):
         states_values = [h, c]
 
     print(decoded_translation)
-

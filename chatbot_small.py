@@ -6,6 +6,8 @@ import yaml
 from gensim.models import Word2Vec
 import re
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+
 ########################################################################################################################
 ########################################### DATA PREPARATION ###########################################################
 ########################################################################################################################
@@ -71,7 +73,6 @@ for i in range(len(answers)):
 answers = list()
 for i in range(len(answers_with_tags)):
     answers.append('<START> ' + answers_with_tags[i] + ' <END>')
-
 
 ########################################################################################################################
 ############################################# MODEL TRAINING ###########################################################
@@ -150,6 +151,7 @@ model.summary()
 
 model.fit([encoder_input_data, decoder_input_data], decoder_output_data, batch_size=50, epochs=300)
 model.save('model_small.h5')
+# model.load_weights('model_small.h5')
 
 
 def make_inference_models():
@@ -169,8 +171,8 @@ def make_inference_models():
 def str_to_tokens(sentence: str):
     words = sentence.lower().split()
     tokens_list = list()
-    for word in words:
-        tokens_list.append(tokenizer.word_index[word])
+    for current_word in words:
+        tokens_list.append(tokenizer.word_index[current_word])
     return tf.keras.preprocessing.sequence.pad_sequences([tokens_list], maxlen=maxlen_questions, padding='post')
 
 
