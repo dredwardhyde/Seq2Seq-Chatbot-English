@@ -1,5 +1,10 @@
 # Seq2Seq Chatbot (English version)
 
+## Requirements:
+**Python 3.6.8+**  
+**TensorFlow 2.1+**  
+[**THIS MODEL CAN NOT BE TRAINED ON GPU BECAUSE OF THIS ISSUE**](https://github.com/tensorflow/tensorflow/issues/33148)
+
 ## Model:  
 ```
 Model: "model"
