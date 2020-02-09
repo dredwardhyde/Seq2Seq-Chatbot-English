@@ -41,6 +41,6 @@ Non-trainable params: 0
 ## Bigger bot:
 
 #### Source: [chatbot_big.py](https://github.com/dredwardhyde/seq2seq-chatbot-english/blob/master/chatbot_big.py)  
-#### Dataset: [Cornell Movie-Dialogs Corpus](https://www.cs.cornell.edu/~cristian/Cornell_Movie-Dialogs_Corpus.html)
+#### Dataset: [Cornell Movie Dialogs Corpus](https://www.cs.cornell.edu/~cristian/Cornell_Movie-Dialogs_Corpus.html)
 #### Results:  
 <img src="https://raw.githubusercontent.com/dredwardhyde/seq2seq-chatbot-english/master/chatbot_big_demo.PNG" width="900"/>
