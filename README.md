@@ -1,7 +1,7 @@
 # Seq2Seq Chatbot (English version)
 
 ## Model:  
-```sh
+```
 Model: "model"
 __________________________________________________________________________________________________
 Layer (type)                    Output Shape         Param #     Connected to                     
