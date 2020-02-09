@@ -6,6 +6,9 @@ import yaml
 from gensim.models import Word2Vec
 import re
 
+########################################################################################################################
+########################################### DATA PREPARATION ###########################################################
+########################################################################################################################
 r = requests.get('https://github.com/shubham0204/Dataset_Archives/blob/master/chatbot_nlp.zip?raw=true')
 z = zipfile.ZipFile(io.BytesIO(r.content))
 z.extractall()
@@ -69,6 +72,12 @@ answers = list()
 for i in range(len(answers_with_tags)):
     answers.append('<START> ' + answers_with_tags[i] + ' <END>')
 
+
+########################################################################################################################
+############################################# MODEL TRAINING ###########################################################
+########################################################################################################################
+print(len(questions))
+print(len(answers))
 tokenizer = tf.keras.preprocessing.text.Tokenizer(filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~\t\n\'0123456789')
 tokenizer.fit_on_texts(questions + answers)
 VOCAB_SIZE = len(tokenizer.word_index) + 1

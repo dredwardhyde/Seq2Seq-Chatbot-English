@@ -7,7 +7,9 @@ import re
 
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
-
+########################################################################################################################
+########################################### DATA PREPARATION ###########################################################
+########################################################################################################################
 r = requests.get('http://www.cs.cornell.edu/~cristian/data/cornell_movie_dialogs_corpus.zip')
 z = zipfile.ZipFile(io.BytesIO(r.content))
 z.extractall()
@@ -16,18 +18,40 @@ conversations = []
 with codecs.open("./cornell movie-dialogs corpus/movie_lines.txt", "rb", encoding="utf-8", errors="ignore") as f:
     lines = f.read().split("\n")
     for line in lines:
-        data = line.split(" +++$+++ ")
-        conversations.append(data)
+        conversations.append(line.split(" +++$+++ "))
 print("Total conversations in dataset: {}".format(len(conversations)))
 
 chats = {}
 for tokens in conversations[:10000]:
     if len(tokens) > 4:
-        idx = tokens[0][1:]
-        chat = tokens[4]
-        chats[int(idx)] = chat
+        chats[int(tokens[0][1:])] = tokens[4]
 
-sorted_chats = sorted(chats.items(), key = lambda x: x[0])
+sorted_chats = sorted(chats.items(), key=lambda x: x[0])
+
+
+def clean_text(text_to_clean):
+    res = text_to_clean.lower()
+    res = re.sub(r"i'm", "i am", res)
+    res = re.sub(r"he's", "he is", res)
+    res = re.sub(r"she's", "she is", res)
+    res = re.sub(r"it's", "it is", res)
+    res = re.sub(r"that's", "that is", res)
+    res = re.sub(r"what's", "that is", res)
+    res = re.sub(r"where's", "where is", res)
+    res = re.sub(r"how's", "how is", res)
+    res = re.sub(r"\'ll", " will", res)
+    res = re.sub(r"\'ve", " have", res)
+    res = re.sub(r"\'re", " are", res)
+    res = re.sub(r"\'d", " would", res)
+    res = re.sub(r"\'re", " are", res)
+    res = re.sub(r"won't", "will not", res)
+    res = re.sub(r"can't", "cannot", res)
+    res = re.sub(r"n't", " not", res)
+    res = re.sub(r"n'", "ng", res)
+    res = re.sub(r"'bout", "about", res)
+    res = re.sub(r"'til", "until", res)
+    res = re.sub(r"[-()\"#/@;:<>{}`+=~|.!?,]", "", res)
+    return res
 
 conves_dict = {}
 counter = 1
@@ -52,12 +76,18 @@ for conves in conves_dict.values():
     for i in range(0, len(conves), 2):
         context_and_target.append((conves[i], conves[i+1]))
 context, target = zip(*context_and_target)
-questions = list(context)
+context_dirty = list(context)
+questions = list()
+for i in range(len(context_dirty)):
+    questions.append(clean_text(context_dirty[i]))
 target_dirty = list(target)
 answers = list()
 for i in range(len(target_dirty)):
-    answers.append('<START> ' + target_dirty[i] + ' <END>')
+    answers.append('<START> ' + clean_text(target_dirty[i]) + ' <END>')
 
+########################################################################################################################
+############################################# MODEL TRAINING ###########################################################
+########################################################################################################################
 print(len(questions))
 print(len(answers))
 
