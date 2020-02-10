@@ -3,8 +3,8 @@
 ## Requirements:
 **Python 3.6.8+**  
 **TensorFlow 2.1+**  
-[**THIS MODEL CAN NOT BE TRAINED ON GPU BECAUSE OF THIS ISSUE**](https://github.com/tensorflow/tensorflow/issues/33148)
-
+[**THIS MODEL CAN NOT BE TRAINED ON NVIDIA GPU BECAUSE OF THIS ISSUE**](https://github.com/tensorflow/tensorflow/issues/33148)  
+[**THIS MODEL CAN NOT BE TRAINED ON RADEON GPU BECAUSE OF THIS ISSUE**](https://github.com/plaidml/plaidml/issues/142)
 ## Model:  
 ```
 Model: "model"
