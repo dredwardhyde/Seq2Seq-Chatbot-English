@@ -46,4 +46,5 @@ Non-trainable params: 0
 <img src="https://raw.githubusercontent.com/dredwardhyde/seq2seq-chatbot-english/master/chatbot_big_demo.PNG" width="900"/>
 
 **Size of dataset for "big" chatbot is limited by RAM, for example first 10000 samples take up to 45GB (total with OS):**  
+
 <img src="https://raw.githubusercontent.com/dredwardhyde/seq2seq-chatbot-english/master/chatbot_load_memory.PNG" width="700"/>
