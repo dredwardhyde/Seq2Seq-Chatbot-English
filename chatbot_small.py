@@ -1,12 +1,15 @@
-import numpy as np
-import tensorflow as tf
-import requests, zipfile, io
 import os
-import yaml
-from gensim.models import Word2Vec
 import re
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+import io
+import numpy as np
+import requests
+import tensorflow as tf
+import yaml
+import zipfile
+from gensim.models import Word2Vec
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 ########################################################################################################################
 ########################################### DATA PREPARATION ###########################################################
@@ -107,7 +110,8 @@ for i in range(len(tokenizer.word_index)):
 
 tokenized_questions = tokenizer.texts_to_sequences(questions)
 maxlen_questions = max([len(x) for x in tokenized_questions])
-padded_questions = tf.keras.preprocessing.sequence.pad_sequences(tokenized_questions, maxlen=maxlen_questions, padding='post')
+padded_questions = tf.keras.preprocessing.sequence.pad_sequences(tokenized_questions, maxlen=maxlen_questions,
+                                                                 padding='post')
 encoder_input_data = np.array(padded_questions)
 
 print(encoder_input_data.shape, maxlen_questions)
@@ -147,6 +151,8 @@ model.summary()
 
 model.fit([encoder_input_data, decoder_input_data], decoder_output_data, batch_size=50, epochs=300)
 model.save('model_small.h5')
+
+
 # model.load_weights('model_small.h5')
 
 
@@ -168,7 +174,9 @@ def str_to_tokens(sentence: str):
     words = sentence.lower().split()
     tokens_list = list()
     for current_word in words:
-        tokens_list.append(tokenizer.word_index[current_word])
+        result = tokenizer.word_index.get(current_word, '')
+        if result != '':
+            tokens_list.append(result)
     return tf.keras.preprocessing.sequence.pad_sequences([tokens_list], maxlen=maxlen_questions, padding='post')
 
 
@@ -186,7 +194,8 @@ for _ in range(100):
         sampled_word = None
         for word, index in tokenizer.word_index.items():
             if sampled_word_index == index:
-                decoded_translation += ' {}'.format(word)
+                if word != 'end':
+                    decoded_translation += ' {}'.format(word)
                 sampled_word = word
 
         if sampled_word == 'end' or len(decoded_translation.split()) > maxlen_answers:
