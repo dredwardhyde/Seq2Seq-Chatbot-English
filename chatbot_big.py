@@ -1,13 +1,19 @@
 import codecs
+import io
 import os
 import re
+import zipfile
 
-import io
 import numpy as np
 import requests
-import tensorflow as tf
-import zipfile
 from gensim.models import Word2Vec
+from keras import Input, Model
+from keras.activations import softmax
+from keras.layers import Embedding, LSTM, Dense
+from keras.optimizers import RMSprop
+from keras.preprocessing.sequence import pad_sequences
+from keras.utils import to_categorical
+from keras_preprocessing.text import Tokenizer
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -62,7 +68,7 @@ def clean_text(text_to_clean):
     return res
 
 
-def get_conversation_dictionary(sorted_chats):
+def get_conversation_dict(sorted_chats):
     conversations_dictionary = {}
     counter = 1
     conversations_ids = []
@@ -81,7 +87,7 @@ def get_conversation_dictionary(sorted_chats):
     return conversations_dictionary
 
 
-def get_clean_questions_and_answers(conversations_dictionary):
+def get_clean_q_and_a(conversations_dictionary):
     context_and_target = []
     for current_conversations in conversations_dictionary.values():
         if len(current_conversations) % 2 != 0:
@@ -103,15 +109,15 @@ def get_clean_questions_and_answers(conversations_dictionary):
 conversations = get_all_conversations()
 print("Total conversations in dataset: {}".format(len(conversations)))
 all_sorted_chats = get_all_sorted_chats(conversations)
-conversation_dictionary = get_conversation_dictionary(all_sorted_chats)
-questions, answers = get_clean_questions_and_answers(conversation_dictionary)
+conversation_dictionary = get_conversation_dict(all_sorted_chats)
+questions, answers = get_clean_q_and_a(conversation_dictionary)
 
 ########################################################################################################################
 ############################################# MODEL TRAINING ###########################################################
 ########################################################################################################################
 print(len(questions))
 print(len(answers))
-tokenizer = tf.keras.preprocessing.text.Tokenizer(filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~\t\n\'0123456789')
+tokenizer = Tokenizer(filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~\t\n\'0123456789')
 tokenizer.fit_on_texts(questions + answers)
 VOCAB_SIZE = len(tokenizer.word_index) + 1
 
@@ -143,15 +149,15 @@ for i in range(len(tokenizer.word_index)):
 
 tokenized_questions = tokenizer.texts_to_sequences(questions)
 maxlen_questions = max([len(x) for x in tokenized_questions])
-padded_questions = tf.keras.preprocessing.sequence.pad_sequences(tokenized_questions, maxlen=maxlen_questions,
-                                                                 padding='post')
+padded_questions = pad_sequences(tokenized_questions, maxlen=maxlen_questions,
+                                 padding='post')
 encoder_input_data = np.array(padded_questions)
 
 print(encoder_input_data.shape, maxlen_questions)
 
 tokenized_answers = tokenizer.texts_to_sequences(answers)
 maxlen_answers = max([len(x) for x in tokenized_answers])
-padded_answers = tf.keras.preprocessing.sequence.pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
+padded_answers = pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
 decoder_input_data = np.array(padded_answers)
 
 print(decoder_input_data.shape, maxlen_answers)
@@ -159,26 +165,26 @@ print(decoder_input_data.shape, maxlen_answers)
 tokenized_answers = tokenizer.texts_to_sequences(answers)
 for i in range(len(tokenized_answers)):
     tokenized_answers[i] = tokenized_answers[i][1:]
-padded_answers = tf.keras.preprocessing.sequence.pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
-onehot_answers = tf.keras.utils.to_categorical(padded_answers, VOCAB_SIZE)
+padded_answers = pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
+onehot_answers = to_categorical(padded_answers, VOCAB_SIZE)
 decoder_output_data = np.array(onehot_answers)
 
 print(decoder_output_data.shape)
 
-encoder_inputs = tf.keras.layers.Input(shape=(None,))
-encoder_embedding = tf.keras.layers.Embedding(VOCAB_SIZE, 200, mask_zero=True)(encoder_inputs)
-encoder_outputs, state_h, state_c = tf.keras.layers.LSTM(200, return_state=True)(encoder_embedding)
+encoder_inputs = Input(shape=(None,))
+encoder_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(encoder_inputs)
+encoder_outputs, state_h, state_c = LSTM(200, return_state=True)(encoder_embedding)
 encoder_states = [state_h, state_c]
 
-decoder_inputs = tf.keras.layers.Input(shape=(None,))
-decoder_embedding = tf.keras.layers.Embedding(VOCAB_SIZE, 200, mask_zero=True)(decoder_inputs)
-decoder_lstm = tf.keras.layers.LSTM(200, return_state=True, return_sequences=True)
+decoder_inputs = Input(shape=(None,))
+decoder_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(decoder_inputs)
+decoder_lstm = LSTM(200, return_state=True, return_sequences=True)
 decoder_outputs, _, _ = decoder_lstm(decoder_embedding, initial_state=encoder_states)
-decoder_dense = tf.keras.layers.Dense(VOCAB_SIZE, activation=tf.keras.activations.softmax)
+decoder_dense = Dense(VOCAB_SIZE, activation=softmax)
 output = decoder_dense(decoder_outputs)
 
-model = tf.keras.models.Model([encoder_inputs, decoder_inputs], output)
-model.compile(optimizer=tf.keras.optimizers.RMSprop(), loss='categorical_crossentropy')
+model = Model([encoder_inputs, decoder_inputs], output)
+model.compile(optimizer=RMSprop(), loss='categorical_crossentropy')
 
 model.summary()
 
@@ -190,14 +196,14 @@ model.save('model_big.h5')
 
 
 def make_inference_models():
-    encoder_model = tf.keras.models.Model(encoder_inputs, encoder_states)
-    decoder_state_input_h = tf.keras.layers.Input(shape=(200,))
-    decoder_state_input_c = tf.keras.layers.Input(shape=(200,))
+    encoder_model = Model(encoder_inputs, encoder_states)
+    decoder_state_input_h = Input(shape=(200,))
+    decoder_state_input_c = Input(shape=(200,))
     decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
     decoder_outputs, state_h, state_c = decoder_lstm(decoder_embedding, initial_state=decoder_states_inputs)
     decoder_states = [state_h, state_c]
     decoder_outputs = decoder_dense(decoder_outputs)
-    decoder_model = tf.keras.models.Model(
+    decoder_model = Model(
         [decoder_inputs] + decoder_states_inputs,
         [decoder_outputs] + decoder_states)
     return encoder_model, decoder_model
@@ -210,7 +216,7 @@ def str_to_tokens(sentence: str):
         result = tokenizer.word_index.get(current_word, '')
         if result != '':
             tokens_list.append(result)
-    return tf.keras.preprocessing.sequence.pad_sequences([tokens_list], maxlen=maxlen_questions, padding='post')
+    return pad_sequences([tokens_list], maxlen=maxlen_questions, padding='post')
 
 
 enc_model, dec_model = make_inference_models()
