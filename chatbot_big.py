@@ -20,14 +20,18 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 ########################################################################################################################
 ########################################### DATA PREPARATION ###########################################################
 ########################################################################################################################
-r = requests.get('http://www.cs.cornell.edu/~cristian/data/cornell_movie_dialogs_corpus.zip')
+url = 'http://www.cs.cornell.edu/~cristian/data/cornell_movie_dialogs_corpus.zip'
+r = requests.get(url)
 z = zipfile.ZipFile(io.BytesIO(r.content))
 z.extractall()
 
 
 def get_all_conversations():
     all_conversations = []
-    with codecs.open("./cornell movie-dialogs corpus/movie_lines.txt", "rb", encoding="utf-8", errors="ignore") as f:
+    with codecs.open("./cornell movie-dialogs corpus/movie_lines.txt",
+                     "rb",
+                     encoding="utf-8",
+                     errors="ignore") as f:
         lines = f.read().split("\n")
         for line in lines:
             all_conversations.append(line.split(" +++$+++ "))
@@ -69,32 +73,32 @@ def clean_text(text_to_clean):
 
 
 def get_conversation_dict(sorted_chats):
-    conversations_dictionary = {}
+    conv_dict = {}
     counter = 1
-    conversations_ids = []
+    conv_ids = []
     for i in range(1, len(sorted_chats) + 1):
         if i < len(sorted_chats):
             if (sorted_chats[i][0] - sorted_chats[i - 1][0]) == 1:
-                if sorted_chats[i - 1][1] not in conversations_ids:
-                    conversations_ids.append(sorted_chats[i - 1][1])
-                conversations_ids.append(sorted_chats[i][1])
+                if sorted_chats[i - 1][1] not in conv_ids:
+                    conv_ids.append(sorted_chats[i - 1][1])
+                conv_ids.append(sorted_chats[i][1])
             elif (sorted_chats[i][0] - sorted_chats[i - 1][0]) > 1:
-                conversations_dictionary[counter] = conversations_ids
-                conversations_ids = []
+                conv_dict[counter] = conv_ids
+                conv_ids = []
             counter += 1
         else:
             continue
-    return conversations_dictionary
+    return conv_dict
 
 
 def get_clean_q_and_a(conversations_dictionary):
-    context_and_target = []
-    for current_conversations in conversations_dictionary.values():
-        if len(current_conversations) % 2 != 0:
-            current_conversations = current_conversations[:-1]
-        for i in range(0, len(current_conversations), 2):
-            context_and_target.append((current_conversations[i], current_conversations[i + 1]))
-    context, target = zip(*context_and_target)
+    ctx_and_target = []
+    for current_conv in conversations_dictionary.values():
+        if len(current_conv) % 2 != 0:
+            current_conv = current_conv[:-1]
+        for i in range(0, len(current_conv), 2):
+            ctx_and_target.append((current_conv[i], current_conv[i + 1]))
+    context, target = zip(*ctx_and_target)
     context_dirty = list(context)
     clean_questions = list()
     for i in range(len(context_dirty)):
@@ -102,30 +106,33 @@ def get_clean_q_and_a(conversations_dictionary):
     target_dirty = list(target)
     clean_answers = list()
     for i in range(len(target_dirty)):
-        clean_answers.append('<START> ' + clean_text(target_dirty[i]) + ' <END>')
+        clean_answers.append('<START> '
+                             + clean_text(target_dirty[i])
+                             + ' <END>')
     return clean_questions, clean_answers
 
 
 conversations = get_all_conversations()
-print("Total conversations in dataset: {}".format(len(conversations)))
+total = len(conversations)
+print("Total conversations in dataset: {}".format(total))
 all_sorted_chats = get_all_sorted_chats(conversations)
 conversation_dictionary = get_conversation_dict(all_sorted_chats)
 questions, answers = get_clean_q_and_a(conversation_dictionary)
+print(len(questions))
+print(len(answers))
 
 ########################################################################################################################
 ############################################# MODEL TRAINING ###########################################################
 ########################################################################################################################
-print(len(questions))
-print(len(answers))
-tokenizer = Tokenizer(filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~\t\n\'0123456789')
+
+target_regex = '!"#$%&()*+,-./:;<=>?@[\]^_`{|}~\t\n\'0123456789'
+tokenizer = Tokenizer(filters=target_regex)
 tokenizer.fit_on_texts(questions + answers)
 VOCAB_SIZE = len(tokenizer.word_index) + 1
-
-print('VOCAB SIZE : {}'.format(VOCAB_SIZE))
-
 vocab = []
 for word in tokenizer.word_index:
     vocab.append(word)
+print('Vocabulary size : {}'.format(VOCAB_SIZE))
 
 
 def tokenize(sentences):
@@ -171,24 +178,27 @@ decoder_output_data = np.array(onehot_answers)
 
 print(decoder_output_data.shape)
 
-encoder_inputs = Input(shape=(None,))
-encoder_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(encoder_inputs)
-encoder_outputs, state_h, state_c = LSTM(200, return_state=True)(encoder_embedding)
-encoder_states = [state_h, state_c]
+enc_inputs = Input(shape=(None,))
+enc_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(enc_inputs)
+enc_outputs, state_h, state_c = LSTM(200, return_state=True)(enc_embedding)
+enc_states = [state_h, state_c]
 
-decoder_inputs = Input(shape=(None,))
-decoder_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(decoder_inputs)
-decoder_lstm = LSTM(200, return_state=True, return_sequences=True)
-decoder_outputs, _, _ = decoder_lstm(decoder_embedding, initial_state=encoder_states)
-decoder_dense = Dense(VOCAB_SIZE, activation=softmax)
-output = decoder_dense(decoder_outputs)
+dec_inputs = Input(shape=(None,))
+dec_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(dec_inputs)
+dec_lstm = LSTM(200, return_state=True, return_sequences=True)
+dec_outputs, _, _ = dec_lstm(dec_embedding, initial_state=enc_states)
+dec_dense = Dense(VOCAB_SIZE, activation=softmax)
+output = dec_dense(dec_outputs)
 
-model = Model([encoder_inputs, decoder_inputs], output)
+model = Model([enc_inputs, dec_inputs], output)
 model.compile(optimizer=RMSprop(), loss='categorical_crossentropy')
 
 model.summary()
 
-model.fit([encoder_input_data, decoder_input_data], decoder_output_data, batch_size=50, epochs=300)
+model.fit([encoder_input_data, decoder_input_data],
+          decoder_output_data,
+          batch_size=50,
+          epochs=300)
 model.save('model_big.h5')
 
 
@@ -196,17 +206,18 @@ model.save('model_big.h5')
 
 
 def make_inference_models():
-    encoder_model = Model(encoder_inputs, encoder_states)
-    decoder_state_input_h = Input(shape=(200,))
-    decoder_state_input_c = Input(shape=(200,))
-    decoder_states_inputs = [decoder_state_input_h, decoder_state_input_c]
-    decoder_outputs, state_h, state_c = decoder_lstm(decoder_embedding, initial_state=decoder_states_inputs)
-    decoder_states = [state_h, state_c]
-    decoder_outputs = decoder_dense(decoder_outputs)
-    decoder_model = Model(
-        [decoder_inputs] + decoder_states_inputs,
-        [decoder_outputs] + decoder_states)
-    return encoder_model, decoder_model
+    enc_model = Model(enc_inputs, enc_states)
+    dec_state_input_h = Input(shape=(200,))
+    dec_state_input_c = Input(shape=(200,))
+    dec_states_inputs = [dec_state_input_h, dec_state_input_c]
+    dec_outputs, state_h, state_c = dec_lstm(dec_embedding,
+                                             initial_state=dec_states_inputs)
+    dec_states = [state_h, state_c]
+    dec_outputs = dec_dense(dec_outputs)
+    dec_model = Model(
+        [dec_inputs] + dec_states_inputs,
+        [dec_outputs] + dec_states)
+    return enc_model, dec_model
 
 
 def str_to_tokens(sentence: str):
@@ -216,19 +227,23 @@ def str_to_tokens(sentence: str):
         result = tokenizer.word_index.get(current_word, '')
         if result != '':
             tokens_list.append(result)
-    return pad_sequences([tokens_list], maxlen=maxlen_questions, padding='post')
+    return pad_sequences([tokens_list],
+                         maxlen=maxlen_questions,
+                         padding='post')
 
 
 enc_model, dec_model = make_inference_models()
 
 for _ in range(100):
-    states_values = enc_model.predict(str_to_tokens(input('Enter question : ')))
+    states_values = enc_model.predict(
+        str_to_tokens(input('Enter question : ')))
     empty_target_seq = np.zeros((1, 1))
     empty_target_seq[0, 0] = tokenizer.word_index['start']
     stop_condition = False
     decoded_translation = ''
     while not stop_condition:
-        dec_outputs, h, c = dec_model.predict([empty_target_seq] + states_values)
+        dec_outputs, h, c = dec_model.predict([empty_target_seq]
+                                              + states_values)
         sampled_word_index = np.argmax(dec_outputs[0, -1, :])
         sampled_word = None
         for word, index in tokenizer.word_index.items():
@@ -237,7 +252,9 @@ for _ in range(100):
                     decoded_translation += ' {}'.format(word)
                 sampled_word = word
 
-        if sampled_word == 'end' or len(decoded_translation.split()) > maxlen_answers:
+        if sampled_word == 'end' \
+                or len(decoded_translation.split()) \
+                > maxlen_answers:
             stop_condition = True
 
         empty_target_seq = np.zeros((1, 1))
