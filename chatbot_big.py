@@ -54,7 +54,7 @@ def clean_text(text_to_clean):
     res = re.sub(r"she's", "she is", res)
     res = re.sub(r"it's", "it is", res)
     res = re.sub(r"that's", "that is", res)
-    res = re.sub(r"what's", "that is", res)
+    res = re.sub(r"what's", "what is", res)
     res = re.sub(r"where's", "where is", res)
     res = re.sub(r"how's", "how is", res)
     res = re.sub(r"\'ll", " will", res)
