@@ -137,18 +137,16 @@ print('Vocabulary size : {}'.format(VOCAB_SIZE))
 
 def tokenize(sentences):
     tokens_list = []
-    vocabulary = []
     for sentence in sentences:
         sentence = sentence.lower()
         sentence = re.sub('[^a-zA-Z]', ' ', sentence)
         tokens = sentence.split()
-        vocabulary += tokens
         tokens_list.append(tokens)
-    return tokens_list, vocabulary
+    return tokens_list
 
 
 p = tokenize(questions + answers)
-model = Word2Vec(p[0], min_count=1)
+model = Word2Vec(p, min_count=1)
 
 embedding_matrix = np.zeros((VOCAB_SIZE, 100))
 for i in range(len(tokenizer.word_index)):
@@ -156,20 +154,19 @@ for i in range(len(tokenizer.word_index)):
 
 tokenized_questions = tokenizer.texts_to_sequences(questions)
 maxlen_questions = max([len(x) for x in tokenized_questions])
-padded_questions = pad_sequences(tokenized_questions, maxlen=maxlen_questions,
-                                 padding='post')
-encoder_input_data = np.array(padded_questions)
+encoder_input_data = pad_sequences(tokenized_questions,
+                                   maxlen=maxlen_questions,
+                                   padding='post')
 
-print(encoder_input_data.shape, maxlen_questions)
+print(encoder_input_data.shape)
 
 tokenized_answers = tokenizer.texts_to_sequences(answers)
 maxlen_answers = max([len(x) for x in tokenized_answers])
-padded_answers = pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
-decoder_input_data = np.array(padded_answers)
+decoder_input_data = pad_sequences(tokenized_answers,
+                                   maxlen=maxlen_answers,
+                                   padding='post')
+print(decoder_input_data.shape)
 
-print(decoder_input_data.shape, maxlen_answers)
-
-tokenized_answers = tokenizer.texts_to_sequences(answers)
 for i in range(len(tokenized_answers)):
     tokenized_answers[i] = tokenized_answers[i][1:]
 padded_answers = pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
