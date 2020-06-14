@@ -118,8 +118,8 @@ print("Total conversations in dataset: {}".format(total))
 all_sorted_chats = get_all_sorted_chats(conversations)
 conversation_dictionary = get_conversation_dict(all_sorted_chats)
 questions, answers = get_clean_q_and_a(conversation_dictionary)
-print(len(questions))
-print(len(answers))
+print("Questions in dataset: {}".format(len(questions)))
+print("Answers in dataset: {}".format(len(answers)))
 
 ########################################################################################################################
 ############################################# MODEL TRAINING ###########################################################
@@ -170,8 +170,7 @@ print(decoder_input_data.shape)
 for i in range(len(tokenized_answers)):
     tokenized_answers[i] = tokenized_answers[i][1:]
 padded_answers = pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
-onehot_answers = to_categorical(padded_answers, VOCAB_SIZE)
-decoder_output_data = np.array(onehot_answers)
+decoder_output_data = to_categorical(padded_answers, VOCAB_SIZE)
 
 print(decoder_output_data.shape)
 
