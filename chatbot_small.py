@@ -88,52 +88,27 @@ target_regex = '!"#$%&()*+,-./:;<=>?@[\]^_`{|}~\t\n\'0123456789'
 tokenizer = Tokenizer(filters=target_regex)
 tokenizer.fit_on_texts(questions + answers)
 VOCAB_SIZE = len(tokenizer.word_index) + 1
-vocab = []
-for word in tokenizer.word_index:
-    vocab.append(word)
 print('Vocabulary size : {}'.format(VOCAB_SIZE))
-
-
-def tokenize(sentences):
-    tokens_list = []
-    vocabulary = []
-    for sentence in sentences:
-        sentence = sentence.lower()
-        sentence = re.sub('[^a-zA-Z]', ' ', sentence)
-        tokens = sentence.split()
-        vocabulary += tokens
-        tokens_list.append(tokens)
-    return tokens_list, vocabulary
-
-
-p = tokenize(questions + answers)
-model = Word2Vec(p[0], min_count=1)
-
-embedding_matrix = np.zeros((VOCAB_SIZE, 100))
-for i in range(len(tokenizer.word_index)):
-    embedding_matrix[i] = model[vocab[i]]
 
 tokenized_questions = tokenizer.texts_to_sequences(questions)
 maxlen_questions = max([len(x) for x in tokenized_questions])
-padded_questions = pad_sequences(tokenized_questions, maxlen=maxlen_questions,
-                                 padding='post')
-encoder_input_data = np.array(padded_questions)
+encoder_input_data = pad_sequences(tokenized_questions,
+                                   maxlen=maxlen_questions,
+                                   padding='post')
 
-print(encoder_input_data.shape, maxlen_questions)
+print(encoder_input_data.shape)
 
 tokenized_answers = tokenizer.texts_to_sequences(answers)
 maxlen_answers = max([len(x) for x in tokenized_answers])
-padded_answers = pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
-decoder_input_data = np.array(padded_answers)
+decoder_input_data = pad_sequences(tokenized_answers,
+                                   maxlen=maxlen_answers,
+                                   padding='post')
+print(decoder_input_data.shape)
 
-print(decoder_input_data.shape, maxlen_answers)
-
-tokenized_answers = tokenizer.texts_to_sequences(answers)
 for i in range(len(tokenized_answers)):
     tokenized_answers[i] = tokenized_answers[i][1:]
 padded_answers = pad_sequences(tokenized_answers, maxlen=maxlen_answers, padding='post')
-onehot_answers = to_categorical(padded_answers, VOCAB_SIZE)
-decoder_output_data = np.array(onehot_answers)
+decoder_output_data = to_categorical(padded_answers, VOCAB_SIZE)
 
 print(decoder_output_data.shape)
 
