@@ -114,7 +114,7 @@ print(decoder_output_data.shape)
 
 enc_inputs = Input(shape=(None,))
 enc_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(enc_inputs)
-enc_outputs, state_h, state_c = LSTM(200, return_state=True)(enc_embedding)
+_, state_h, state_c = LSTM(200, return_state=True)(enc_embedding)
 enc_states = [state_h, state_c]
 
 dec_inputs = Input(shape=(None,))

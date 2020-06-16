@@ -155,7 +155,7 @@ print(decoder_output_data.shape)
 
 enc_inputs = Input(shape=(None,))
 enc_embedding = Embedding(VOCAB_SIZE, 200, mask_zero=True)(enc_inputs)
-enc_outputs, state_h, state_c = LSTM(200, return_state=True)(enc_embedding)
+_, state_h, state_c = LSTM(200, return_state=True)(enc_embedding)
 enc_states = [state_h, state_c]
 
 dec_inputs = Input(shape=(None,))
@@ -181,7 +181,6 @@ model.save('model_big.h5')
 
 
 def make_inference_models():
-    enc_model = Model(enc_inputs, enc_states)
     dec_state_input_h = Input(shape=(200,))
     dec_state_input_c = Input(shape=(200,))
     dec_states_inputs = [dec_state_input_h, dec_state_input_c]
@@ -192,6 +191,11 @@ def make_inference_models():
     dec_model = Model(
         [dec_inputs] + dec_states_inputs,
         [dec_outputs] + dec_states)
+    print('Inference decoder:')
+    dec_model.summary()
+    print('Inference encoder:')
+    enc_model = Model(inputs=enc_inputs, outputs=enc_states)
+    enc_model.summary()
     return enc_model, dec_model
 
 
