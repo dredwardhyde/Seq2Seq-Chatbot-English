@@ -140,7 +140,6 @@ model.save('model_small.h5')
 
 
 def make_inference_models():
-    enc_model = Model(enc_inputs, enc_states)
     dec_state_input_h = Input(shape=(200,))
     dec_state_input_c = Input(shape=(200,))
     dec_states_inputs = [dec_state_input_h, dec_state_input_c]
@@ -149,8 +148,13 @@ def make_inference_models():
     dec_states = [state_h, state_c]
     dec_outputs = dec_dense(dec_outputs)
     dec_model = Model(
-        [dec_inputs] + dec_states_inputs,
-        [dec_outputs] + dec_states)
+        inputs=[dec_inputs] + dec_states_inputs,
+        outputs=[dec_outputs] + dec_states)
+    print('Inference decoder:')
+    dec_model.summary()
+    print('Inference encoder:')
+    enc_model = Model(inputs=enc_inputs, outputs=enc_states)
+    enc_model.summary()
     return enc_model, dec_model
 
 
